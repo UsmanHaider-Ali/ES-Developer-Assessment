@@ -3,8 +3,8 @@ import 'package:es_developer_assessment/domain/blocs/movies/movies_bloc.dart';
 import 'package:es_developer_assessment/domain/blocs/movies/movies_events.dart';
 import 'package:es_developer_assessment/domain/blocs/movies/movies_states.dart';
 import 'package:es_developer_assessment/presentation/widgets/horizontal_movie_tile.dart';
-import 'package:es_developer_assessment/presentation/widgets/no_internet_connection.dart';
 import 'package:es_developer_assessment/presentation/widgets/horizontal_movie_shimmer.dart';
+import 'package:es_developer_assessment/presentation/widgets/no_internet_connection.dart';
 import 'package:es_developer_assessment/presentation/widgets/verticle_movie_shimmer.dart';
 import 'package:es_developer_assessment/presentation/widgets/verticle_movie_tile.dart';
 import 'package:es_developer_assessment/utils/enums.dart';
@@ -68,12 +68,14 @@ class _MoviesPageState extends State<MoviesPage> {
             const SizedBox(height: 12),
             SizedBox(
               height: 250,
-              child: BlocConsumer<MoviesBloc, MoviesStates>(
+              child: BlocBuilder<MoviesBloc, MoviesStates>(
                 bloc: moviesBloc,
                 buildWhen: (previous, current) => previous.upcomingMovies != current.upcomingMovies,
                 builder: (context, state) {
-                  debugPrint('Upcoming Movies Builder building...');
-                  if (state.apiStatus == ApiStatus.initial || (state.apiStatus == ApiStatus.loading && !state.isLoadingMoreUpcomingMovies)) {
+                  if (state.apiStatus == ApiStatus.noInternet && state.errorMessage == "No internet connection") {
+                    return const Center(child: NoInternetConnection(title: "No internet connection"));
+                  }
+                  if (state.apiStatus == ApiStatus.loading && !state.isLoadingMoreUpcomingMovies) {
                     return ListView.builder(
                       controller: _upcomingMoviesScrollController,
                       itemCount: 5,
@@ -81,9 +83,6 @@ class _MoviesPageState extends State<MoviesPage> {
                       shrinkWrap: true,
                       itemBuilder: (context, index) => const HorizontalMovieShimmer(),
                     );
-                  }
-                  if (state.apiStatus == ApiStatus.error) {
-                    return const Center(child: NoInternetConnection());
                   }
                   return ListView.builder(
                     controller: _upcomingMoviesScrollController,
@@ -93,11 +92,6 @@ class _MoviesPageState extends State<MoviesPage> {
                     itemBuilder: (context, index) => HorizontalMovieTile(movie: state.upcomingMovies![index]),
                   );
                 },
-                listener: (BuildContext context, MoviesStates state) {
-                  if (state.apiStatus == ApiStatus.error && !state.isLoadingMoreUpcomingMovies) {
-                    debugPrint("Error ${state.errorMessage}");
-                  }
-                },
               ),
             ),
             const SizedBox(height: 12),
@@ -106,7 +100,10 @@ class _MoviesPageState extends State<MoviesPage> {
             BlocBuilder<MoviesBloc, MoviesStates>(
               buildWhen: (previous, current) => previous.popularMovies != current.popularMovies,
               builder: (context, state) {
-                if (state.apiStatus == ApiStatus.initial || (state.apiStatus == ApiStatus.loading && !state.isLoadingMorePopularMovies)) {
+                if (state.apiStatus == ApiStatus.noInternet && state.errorMessage == "No internet connection") {
+                  return const SizedBox(height: 250, child: Center(child: NoInternetConnection(title: "No internet connection")));
+                }
+                if (state.apiStatus == ApiStatus.loading && !state.isLoadingMorePopularMovies) {
                   return ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -115,9 +112,7 @@ class _MoviesPageState extends State<MoviesPage> {
                     itemBuilder: (context, index) => const VerticalMovieShimmer(),
                   );
                 }
-                if (state.apiStatus == ApiStatus.error) {
-                  return const Center(child: Padding(padding: EdgeInsets.only(top: 75), child: NoInternetConnection()));
-                }
+
                 return ListView.builder(
                   itemCount: state.popularMovies?.length ?? 0,
                   shrinkWrap: true,

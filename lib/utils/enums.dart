@@ -1,4 +1,4 @@
-enum ApiStatus { initial, loading, success, error }
+enum ApiStatus { loading, success, error, noInternet }
 
 enum Genre {
   unknow(0, "Unknown"),
@@ -29,5 +29,3 @@ enum Genre {
 
   static Genre? getById(int id) => Genre.values.firstWhere((genre) => genre.id == id, orElse: () => unknow);
 }
-
-

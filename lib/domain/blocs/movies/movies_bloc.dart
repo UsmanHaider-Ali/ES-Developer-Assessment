@@ -9,7 +9,7 @@ import 'package:es_developer_assessment/utils/functions.dart';
 import 'package:flutter/material.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 
-class MoviesBloc extends Bloc<MoviesEvents, MoviesStates> {
+class MoviesBloc extends HydratedBloc<MoviesEvents, MoviesStates> {
   final MoviesRepository moviesRepository;
 
   MoviesBloc({required this.moviesRepository}) : super(const MoviesStates()) {
@@ -19,7 +19,7 @@ class MoviesBloc extends Bloc<MoviesEvents, MoviesStates> {
     on<GetMovieVideos>(_getMovieVideos);
   }
   Future<void> _getUpcomingMovies(GetUpcomingMovies event, Emitter<MoviesStates> emit) async {
-    if (state.isLoadingMoreUpcomingMovies) return;
+    // if (state.isLoadingMoreUpcomingMovies) return;
     emit(state.copyWith(apiStatus: ApiStatus.loading, isLoadingMoreUpcomingMovies: true));
 
     try {
@@ -40,13 +40,17 @@ class MoviesBloc extends Bloc<MoviesEvents, MoviesStates> {
           currentPageForUpcomingMovies: event.currentPage + 1,
           isLoadingMoreUpcomingMovies: false));
     } catch (error) {
-      debugPrint('_getUpcomingMovies Error: $error');
-      emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      debugPrint('GetUpcomingMovies Error: $error');
+      if (error.toString() == "No internet connection") {
+        emit(state.copyWith(apiStatus: ApiStatus.noInternet, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      } else {
+        emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      }
     }
   }
 
   Future<void> _getPopularMovies(GetPopularMovies event, Emitter<MoviesStates> emit) async {
-    if (state.isLoadingMorePopularMovies) return;
+    // if (state.isLoadingMorePopularMovies) return;
     emit(state.copyWith(apiStatus: ApiStatus.loading, isLoadingMorePopularMovies: true));
 
     try {
@@ -67,8 +71,12 @@ class MoviesBloc extends Bloc<MoviesEvents, MoviesStates> {
           currentPageForPopularMovies: event.currentPage + 1,
           isLoadingMorePopularMovies: false));
     } catch (error) {
-      debugPrint('Error: $error');
-      emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString(), isLoadingMorePopularMovies: false));
+      debugPrint('GetPopularMovies Error: $error');
+      if (error.toString() == "No internet connection") {
+        emit(state.copyWith(apiStatus: ApiStatus.noInternet, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      } else {
+        emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      }
     }
   }
 
@@ -76,16 +84,34 @@ class MoviesBloc extends Bloc<MoviesEvents, MoviesStates> {
     emit(state.copyWith(apiStatus: ApiStatus.loading));
 
     try {
-      final movieDetail = await moviesRepository.getMovieDetail({"movieId": event.movieId}, {});
+      if (state.movieDetailsCache.containsKey(event.movieId)) {
+        emit(state.copyWith(apiStatus: ApiStatus.success, movieDetailsCache: state.movieDetailsCache));
+      } else {
+        final movieDetail = await moviesRepository.getMovieDetail({"movieId": event.movieId}, {});
 
-      emit(state.copyWith(apiStatus: ApiStatus.success, movieDetailModel: MovieDetailModel.fromJson(movieDetail)));
+        final movieDetailModel = MovieDetailModel.fromJson(movieDetail);
+
+        emit(state.copyWith(
+          apiStatus: ApiStatus.success,
+          movieDetailsCache: {...state.movieDetailsCache, event.movieId: movieDetailModel},
+        ));
+      }
     } catch (error) {
-      debugPrint('Error: $error');
-      emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString()));
+      debugPrint('GetMovieDetail Error: $error');
+      if (error.toString() == "No internet connection") {
+        emit(state.copyWith(apiStatus: ApiStatus.noInternet, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      } else {
+        emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      }
     }
   }
 
   Future<void> _getMovieVideos(GetMovieVideos event, Emitter<MoviesStates> emit) async {
+    bool isConnected = await isConnectedToInternet();
+    if (!isConnected) {
+      emit(state.copyWith(apiStatus: ApiStatus.noInternet));
+      return;
+    }
     emit(state.copyWith(apiStatus: ApiStatus.loading));
 
     try {
@@ -96,8 +122,22 @@ class MoviesBloc extends Bloc<MoviesEvents, MoviesStates> {
 
       emit(state.copyWith(apiStatus: ApiStatus.success, movieVideoModel: movieVideoModel));
     } catch (error) {
-      debugPrint('Error: $error');
-      emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString()));
+      debugPrint('GetMovieVideos Error: $error');
+      if (error.toString() == "No internet connection") {
+        emit(state.copyWith(apiStatus: ApiStatus.noInternet, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      } else {
+        emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
+      }
     }
+  }
+
+  @override
+  MoviesStates? fromJson(Map<String, dynamic> json) {
+    return MoviesStates.fromJson(json);
+  }
+
+  @override
+  Map<String, dynamic>? toJson(MoviesStates state) {
+    return state.toJson();
   }
 }
