@@ -3,7 +3,9 @@ import 'package:es_developer_assessment/domain/blocs/movies/movies_bloc.dart';
 import 'package:es_developer_assessment/domain/blocs/movies/movies_events.dart';
 import 'package:es_developer_assessment/domain/blocs/movies/movies_states.dart';
 import 'package:es_developer_assessment/domain/models/movie/movie_model.dart';
+import 'package:es_developer_assessment/presentation/widgets/movie_detail_shimmer.dart';
 import 'package:es_developer_assessment/presentation/widgets/movie_tage_tile.dart';
+import 'package:es_developer_assessment/presentation/widgets/no_internet_connection.dart';
 import 'package:es_developer_assessment/presentation/widgets/production_company_tile.dart';
 import 'package:es_developer_assessment/utils/enums.dart';
 import 'package:es_developer_assessment/utils/functions.dart';
@@ -49,11 +51,18 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
         child: ListView(
           padding: const EdgeInsets.all(0),
           children: [
-            BlocConsumer<MoviesBloc, MoviesStates>(
-              listener: (BuildContext context, MoviesStates state) {},
+            BlocBuilder<MoviesBloc, MoviesStates>(
+              // buildWhen: (previous, current) => previous.movieVideoModel!= current.movieVideoModel,
               builder: (context, state) {
-                if (state.apiStatus == ApiStatus.initial || state.apiStatus == ApiStatus.loading || state.movieVideoModel == null) {
+                if (state.apiStatus == ApiStatus.initial || state.apiStatus == ApiStatus.loading) {
                   return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
+                }
+
+                if (state.apiStatus == ApiStatus.error) {
+                  return const Center();
+                }
+                if (state.movieVideoModel == null) {
+                  return Center(child: Text("Something went wrong, please try again later.", style: Theme.of(context).textTheme.bodyMedium));
                 }
                 _controller = YoutubePlayerController(
                     initialVideoId: state.movieVideoModel!.key!, flags: const YoutubePlayerFlags(autoPlay: true, mute: false));
@@ -66,13 +75,16 @@ class _MovieDetailScreenState extends State<MovieDetailScreen> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: BlocBuilder<MoviesBloc, MoviesStates>(
-                buildWhen: (previous, current) => previous.movieDetailModel != current.movieDetailModel,
+                // buildWhen: (previous, current) => previous.movieDetailModel != current.movieDetailModel,
                 builder: (context, state) {
                   if (state.apiStatus == ApiStatus.initial || state.apiStatus == ApiStatus.loading) {
-                    return const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()));
+                    return const MovieDetailShimmer();
+                  }
+                  if (state.apiStatus == ApiStatus.error) {
+                    return const SizedBox(height: 750, child: NoInternetConnection());
                   }
                   return state.movieDetailModel == null
-                      ? const SizedBox(height: 300, child: Center(child: CircularProgressIndicator()))
+                      ? const MovieDetailShimmer()
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

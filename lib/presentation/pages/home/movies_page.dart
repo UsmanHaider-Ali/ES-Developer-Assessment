@@ -3,6 +3,9 @@ import 'package:es_developer_assessment/domain/blocs/movies/movies_bloc.dart';
 import 'package:es_developer_assessment/domain/blocs/movies/movies_events.dart';
 import 'package:es_developer_assessment/domain/blocs/movies/movies_states.dart';
 import 'package:es_developer_assessment/presentation/widgets/horizontal_movie_tile.dart';
+import 'package:es_developer_assessment/presentation/widgets/no_internet_connection.dart';
+import 'package:es_developer_assessment/presentation/widgets/horizontal_movie_shimmer.dart';
+import 'package:es_developer_assessment/presentation/widgets/verticle_movie_shimmer.dart';
 import 'package:es_developer_assessment/presentation/widgets/verticle_movie_tile.dart';
 import 'package:es_developer_assessment/utils/enums.dart';
 import 'package:flutter/material.dart';
@@ -65,13 +68,22 @@ class _MoviesPageState extends State<MoviesPage> {
             const SizedBox(height: 12),
             SizedBox(
               height: 250,
-              child: BlocBuilder<MoviesBloc, MoviesStates>(
+              child: BlocConsumer<MoviesBloc, MoviesStates>(
                 bloc: moviesBloc,
                 buildWhen: (previous, current) => previous.upcomingMovies != current.upcomingMovies,
                 builder: (context, state) {
                   debugPrint('Upcoming Movies Builder building...');
                   if (state.apiStatus == ApiStatus.initial || (state.apiStatus == ApiStatus.loading && !state.isLoadingMoreUpcomingMovies)) {
-                    return const Center(child: CircularProgressIndicator());
+                    return ListView.builder(
+                      controller: _upcomingMoviesScrollController,
+                      itemCount: 5,
+                      scrollDirection: Axis.horizontal,
+                      shrinkWrap: true,
+                      itemBuilder: (context, index) => const HorizontalMovieShimmer(),
+                    );
+                  }
+                  if (state.apiStatus == ApiStatus.error) {
+                    return const Center(child: NoInternetConnection());
                   }
                   return ListView.builder(
                     controller: _upcomingMoviesScrollController,
@@ -80,6 +92,11 @@ class _MoviesPageState extends State<MoviesPage> {
                     shrinkWrap: true,
                     itemBuilder: (context, index) => HorizontalMovieTile(movie: state.upcomingMovies![index]),
                   );
+                },
+                listener: (BuildContext context, MoviesStates state) {
+                  if (state.apiStatus == ApiStatus.error && !state.isLoadingMoreUpcomingMovies) {
+                    debugPrint("Error ${state.errorMessage}");
+                  }
                 },
               ),
             ),
@@ -90,10 +107,16 @@ class _MoviesPageState extends State<MoviesPage> {
               buildWhen: (previous, current) => previous.popularMovies != current.popularMovies,
               builder: (context, state) {
                 if (state.apiStatus == ApiStatus.initial || (state.apiStatus == ApiStatus.loading && !state.isLoadingMorePopularMovies)) {
-                  return const Padding(
-                    padding: EdgeInsets.only(top: 100),
-                    child: Center(child: CircularProgressIndicator()),
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 5,
+                    scrollDirection: Axis.vertical,
+                    itemBuilder: (context, index) => const VerticalMovieShimmer(),
                   );
+                }
+                if (state.apiStatus == ApiStatus.error) {
+                  return const Center(child: Padding(padding: EdgeInsets.only(top: 75), child: NoInternetConnection()));
                 }
                 return ListView.builder(
                   itemCount: state.popularMovies?.length ?? 0,

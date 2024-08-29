@@ -5,6 +5,7 @@ import 'package:es_developer_assessment/domain/models/movie/movie_model.dart';
 import 'package:es_developer_assessment/domain/models/movie_detail/movie_detail_model.dart';
 import 'package:es_developer_assessment/domain/models/movie_video/movie_video_model.dart';
 import 'package:es_developer_assessment/utils/enums.dart';
+import 'package:es_developer_assessment/utils/functions.dart';
 import 'package:flutter/material.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 
@@ -39,7 +40,7 @@ class MoviesBloc extends Bloc<MoviesEvents, MoviesStates> {
           currentPageForUpcomingMovies: event.currentPage + 1,
           isLoadingMoreUpcomingMovies: false));
     } catch (error) {
-      debugPrint('Error: $error');
+      debugPrint('_getUpcomingMovies Error: $error');
       emit(state.copyWith(apiStatus: ApiStatus.error, errorMessage: error.toString(), isLoadingMoreUpcomingMovies: false));
     }
   }

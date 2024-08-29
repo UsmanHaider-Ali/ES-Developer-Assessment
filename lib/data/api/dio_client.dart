@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:es_developer_assessment/data/api/api_services.dart';
 import 'package:es_developer_assessment/domain/exceptions/exceptions.dart';
+import 'package:es_developer_assessment/utils/functions.dart';
 import 'package:flutter/material.dart';
 
 class DioClient extends ApiServices {
@@ -8,7 +9,7 @@ class DioClient extends ApiServices {
   final String apiKey;
 
   DioClient({required this.dio, required this.apiKey}) {
-    dio.interceptors.add(ApiKeyInterceptor(apiKey: apiKey));
+    dio.interceptors.addAll([ApiKeyInterceptor(apiKey: apiKey), ConnectivityInterceptor()]);
   }
 
   @override
@@ -19,8 +20,8 @@ class DioClient extends ApiServices {
       final response = await dio.get(url, queryParameters: params, options: Options(headers: headers));
       jsonResponse = handleResponse(response);
     } on DioException catch (e) {
-      debugPrint("DioError => ${e.message}");
-      throw FetchDataException("Error occurred while communicating with server with status code: ${e.response?.statusCode}");
+      debugPrint("DioError => ${e.error}");
+      throw FetchDataException("${e.error}");
     } catch (e) {
       debugPrint("Exception => $e");
       throw Exception("An unexpected error occurred.");
@@ -41,6 +42,22 @@ class ApiKeyInterceptor extends Interceptor {
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     options.queryParameters['api_key'] = apiKey;
     handler.next(options);
+  }
+}
+
+class ConnectivityInterceptor extends Interceptor {
+  ConnectivityInterceptor();
+
+  @override
+  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    final isConnected = await isConnectedToInternet();
+    if (!isConnected) {
+      return handler.reject(
+        DioException(requestOptions: options, error: 'No internet connection', type: DioExceptionType.connectionError),
+        true,
+      );
+    }
+    return super.onRequest(options, handler);
   }
 }
 

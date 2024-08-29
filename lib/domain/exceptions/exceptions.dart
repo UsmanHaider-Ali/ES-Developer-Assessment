@@ -21,5 +21,5 @@ class NoInternetException extends AppException {
 }
 
 class FetchDataException extends AppException {
-  FetchDataException([String message = '']) : super(message, 'Error During Communication: ');
+  FetchDataException([String message = '']) : super(message, '');
 }

@@ -7,7 +7,11 @@ import 'package:get_it/get_it.dart';
 
 final locator = GetIt.instance;
 void setupLocator() {
-  locator.registerLazySingleton<Dio>(() => Dio(BaseOptions()));
+  locator.registerLazySingleton<Dio>(() => Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
+        sendTimeout: const Duration(seconds: 10),
+      )));
   locator.registerLazySingleton<DioClient>(() => DioClient(dio: locator(), apiKey: dotenv.env['API_KEY']!));
 
   locator.registerLazySingleton<MoviesRepository>(() => MoviesRepository(dioClient: locator()));
